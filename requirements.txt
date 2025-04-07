@@ -9,3 +9,4 @@ langchain-community
 langchain-openai
 langchain-chroma
 python-dotenv
+pysqlite3-binary
