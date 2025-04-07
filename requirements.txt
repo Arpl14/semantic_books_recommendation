@@ -1,0 +1,10 @@
+pandas
+numpy
+streamlit
+langchain
+openai
+python-dotenv
+tqdm
+transformers
+torch
+chromadb
