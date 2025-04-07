@@ -1,12 +1,9 @@
 streamlit
 pandas
 numpy
-tqdm
-transformers
-torch
+python-dotenv
 langchain
 langchain-community
 langchain-openai
-langchain-chroma
-python-dotenv
-pysqlite3-binary
+faiss-cpu
+chromadb  # optional but not used here anymore
