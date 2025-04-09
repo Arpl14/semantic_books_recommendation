@@ -72,7 +72,7 @@ st.title("\U0001F4DA Semantic Book Recommendation System")
 
 st.markdown(
     """
-    <div style='display: flex; justify-content: space-between; align-items: center; margin-top:-10px;'>
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-top:-10px; margin-bottom:-10px;'>
         <span style='font-size: 18px; color: gray;'>Find the perfect book to read — for the love of stories, discovery, and imagination.</span>
         <span style='font-size: 18px; color: gray; '>- Arpita Lonakadi</span>
     </div>
