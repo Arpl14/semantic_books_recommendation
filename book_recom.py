@@ -68,21 +68,16 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
 
 # --- UI ---
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
-
 st.title("\U0001F4DA Semantic Book Recommendation System")
 
 st.markdown(
     """
-    <div style='font-size:18px; color:gray; margin-top:-10px;'>
-        Find the perfect book to read — for the love of stories, discovery, and imagination.
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-top:-10px;'>
+        <span style='font-size: 18px; color: gray;'>Find the perfect book to read — for the love of stories, discovery, and imagination.</span>
+        <span style='font-size: 16px; font-weight: bold;'>Project by Arpita Lonakadi</span>
     </div>
     """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    "<div style='text-align: right; font-weight: bold; margin-top:10px;'>- Arpita Lonakadi</div>",
-    unsafe_allow_html=True,
+    unsafe_allow_html=True
 )
 
 # Row 1: Query and Author
