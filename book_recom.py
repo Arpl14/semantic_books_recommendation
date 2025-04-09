@@ -74,7 +74,7 @@ st.markdown(
     """
     <div style='display: flex; justify-content: space-between; align-items: center; margin-top:-10px;'>
         <span style='font-size: 18px; color: gray;'>Find the perfect book to read — for the love of stories, discovery, and imagination.</span>
-        <span style='font-size: 16px; font-weight: bold;'>Project by Arpita Lonakadi</span>
+        <span style='font-size: 18px; color: gray; '>- Arpita Lonakadi</span>
     </div>
     """,
     unsafe_allow_html=True
