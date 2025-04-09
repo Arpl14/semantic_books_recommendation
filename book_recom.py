@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -7,25 +8,29 @@ from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-import sys
-import os
 
-os.environ["PYTHONIOENCODING"] = "utf-8"
+# ------------------ Setup ------------------
 load_dotenv()
+os.environ["PYTHONIOENCODING"] = "utf-8"
 
-# Load dataset
+FAISS_INDEX_PATH = "faiss_books_index"
+TEXT_FILE = "tagged_description.txt"
+
+# ------------------ Load Dataset ------------------
 books = pd.read_csv("books_with_emotions.csv")
 books["large_thumbnail"] = books["thumbnail"].fillna("cover-not-found.jpg") + "&fife=w800"
 
-# Load documents
-raw_documents = TextLoader("tagged_description.txt").load()
-text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0, chunk_overlap=0)
-documents = text_splitter.split_documents(raw_documents)
+# ------------------ Load or Build Vector DB ------------------
+if os.path.exists(FAISS_INDEX_PATH):
+    db_books = FAISS.load_local(FAISS_INDEX_PATH, OpenAIEmbeddings())
+else:
+    raw_documents = TextLoader(TEXT_FILE, encoding="utf-8").load()
+    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0, chunk_overlap=0)
+    documents = text_splitter.split_documents(raw_documents)
+    db_books = FAISS.from_documents(documents, OpenAIEmbeddings())
+    db_books.save_local(FAISS_INDEX_PATH)
 
-# Create FAISS vectorstore
-db_books = FAISS.from_documents(documents, OpenAIEmbeddings())
-
-# Filtered vector search
+# ------------------ Recommendation Logic ------------------
 def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=50, final_top_k=12):
     recs = db_books.similarity_search(query, k=initial_top_k)
     isbns = [int(doc.page_content.split()[0].strip('"')) for doc in recs]
@@ -33,16 +38,12 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
 
     if category != "All":
         filtered = filtered[filtered["super_category"] == category]
-
     if tone != "All":
         filtered = filtered.sort_values(by=tone.lower(), ascending=False)
-
     if rating:
         filtered = filtered[filtered["average_rating"] >= rating]
-
     if age:
         filtered = filtered[filtered["age_of_book"] <= age]
-
     if author:
         filtered = filtered[filtered["authors"].str.contains(author, case=False, na=False)]
 
@@ -61,7 +62,7 @@ def recommend_books(query, category, tone, rating, age, author):
 
     return results
 
-# Streamlit UI
+# ------------------ Streamlit UI ------------------
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("📚 Semantic Book Recommendation System")
 
