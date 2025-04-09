@@ -67,23 +67,25 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("📚 Semantic Book Recommendation System")
 
-col1, col2, col3 = st.columns([2, 1, 1])
+# First row — Query + Author
+col1, col2 = st.columns([2, 1])
 query = col1.text_input("🔎 Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
-category = col2.selectbox("📂 Category", ["All"] + sorted(books["super_category"].dropna().unique()))
-tone = col3.selectbox("🎭 Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
-
-col4, col5, col6 = st.columns([1, 1, 1])
-rating_display = col4.selectbox("⭐️ Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
-rating = 0 if rating_display == "No preference" else float(rating_display)
-age = col5.slider("📅 Show books up to how old? (in years)", 0, 100, 100)
-
-# Preferred author – combo of dropdown + type
-author = col6.selectbox(
-    "👩‍💼 Preferred Author (or type your own)",
+author = col2.selectbox(
+    " Preferred Author (or type your own)",
     options=["No preference"] + top_authors,
     index=0,
     placeholder="Choose a top-selling author or type your own",
 )
+
+# Second row — Rating, Age, Category, Emotion
+col3, col4, col5, col6 = st.columns(4)
+rating_display = col3.selectbox(" Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
+rating = 0 if rating_display == "No preference" else float(rating_display)
+age = col4.slider(" Age of book (in years)", 0, 100, 100)
+category = col5.selectbox("Category", ["All"] + sorted(books["super_category"].dropna().unique()))
+tone = col6.selectbox("Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
+
+
 # --- Results ---
 if st.button("🔍 Recommend"):
     recommendations = retrieve_semantic_recommendations(query, category, tone, rating, age, author)
