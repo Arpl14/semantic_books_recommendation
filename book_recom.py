@@ -67,6 +67,7 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
     return filtered.head(final_top_k)
 
 # --- UI ---
+# --- UI ---
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("\U0001F4DA Semantic Book Recommendation System")
 
