@@ -6,4 +6,3 @@ langchain
 langchain-community
 langchain-openai
 faiss-cpu
-chromadb  # optional but not used here anymore
