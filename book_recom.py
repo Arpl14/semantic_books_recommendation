@@ -78,11 +78,12 @@ rating = 0 if rating_display == "No preference" else float(rating_display)
 age = col5.slider("📅 Show books up to how old? (in years)", 0, 100, 100)
 
 # Preferred author – combo of dropdown + type
-col6.markdown("👩‍💼 **Preferred Author (or type your own)**")
-author_dropdown = col6.selectbox(" ", ["No preference"] + top_authors, label_visibility="collapsed")
-author_text = col6.text_input("✍️ Type an author name (optional)", label_visibility="collapsed")
-author = author_text.strip() if author_text else author_dropdown
-
+author = col6.selectbox(
+    "👩‍💼 Preferred Author (or type your own)",
+    options=["No preference"] + top_authors,
+    index=0,
+    placeholder="Choose a top-selling author or type your own",
+)
 # --- Results ---
 if st.button("🔍 Recommend"):
     recommendations = retrieve_semantic_recommendations(query, category, tone, rating, age, author)
