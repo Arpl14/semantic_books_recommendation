@@ -77,7 +77,7 @@ top_authors = [
     "Jeff Kinney", "David Baldacci", "Margaret Atwood", "Cassandra Clare", "Sarah J. Maas"
 ]
 author = col6.selectbox("👩‍💼 Preferred Author (or type your own)", ["Choose top-selling authors or type manually"] + top_authors)
-if author == "Choose top-selling authors or type manually":
+
 
 # Recommendation trigger
 if st.button("🔍 Recommend"):
