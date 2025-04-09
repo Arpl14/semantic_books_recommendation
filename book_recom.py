@@ -81,9 +81,9 @@ author = col2.selectbox(
 col3, col4, col5, col6 = st.columns(4)
 rating_display = col3.selectbox(" Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
 rating = 0 if rating_display == "No preference" else float(rating_display)
-age = col4.slider(" Age of book (in years)", 0, 100, 100)
+age = col6.slider(" Age of book (in years)", 0, 100, 100)
 category = col5.selectbox("Category", ["All"] + sorted(books["super_category"].dropna().unique()))
-tone = col6.selectbox("Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
+tone = col4.selectbox("Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
 
 
 # --- Results ---
