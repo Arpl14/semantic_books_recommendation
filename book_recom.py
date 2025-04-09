@@ -9,6 +9,7 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 
+# Ensure UTF-8 encoding
 os.environ["PYTHONIOENCODING"] = "utf-8"
 load_dotenv()
 
@@ -21,15 +22,6 @@ books = pd.read_csv("books_with_emotions.csv")
 books["large_thumbnail"] = books["thumbnail"].fillna(DEFAULT_COVER) + "&fife=w800"
 books["large_thumbnail"] = books["large_thumbnail"].str.replace("nan&fife=w800", DEFAULT_COVER)
 
-# Top 20 authors by average ratings_count
-top_authors = (
-    books.groupby("authors")["ratings_count"]
-    .mean()
-    .sort_values(ascending=False)
-    .head(20)
-    .index.tolist()
-)
-
 # --- Load or build FAISS vectorstore ---
 if os.path.exists(VECTOR_DB_PATH):
     db_books = FAISS.load_local(VECTOR_DB_PATH, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
@@ -41,7 +33,7 @@ else:
     db_books.save_local(VECTOR_DB_PATH)
 
 # --- Recommendation Logic ---
-def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=50, final_top_k=12):
+def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=200, final_top_k=20):
     recs = db_books.similarity_search(query, k=initial_top_k)
     isbns = [int(doc.page_content.split()[0].strip('"')) for doc in recs]
     filtered = books[books["isbn13"].isin(isbns)]
@@ -58,7 +50,7 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
     if age:
         filtered = filtered[filtered["age_of_book"] <= age]
 
-    if author and author != "No preference":
+    if author:
         filtered = filtered[filtered["authors"].str.contains(author, case=False, na=False)]
 
     return filtered.head(final_top_k)
@@ -67,24 +59,19 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("📚 Semantic Book Recommendation System")
 
-# First row — Query + Author
+# --- Input Layout ---
 col1, col2 = st.columns([2, 1])
-query = col1.text_input("Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
-author = col2.text_input(
-    "Preferred Author",
-    placeholder="Type an author’s name (e.g., Paulo Coelho)"
-)
+query = col1.text_input("🔎 Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
+author = col2.text_input("👩‍💼 Preferred Author", placeholder="e.g., Paulo Coelho")
 
-# Second row — Rating, Age, Category, Emotion
-col3, col4, col5, col6 = st.columns(4)
-rating_display = col3.selectbox(" Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
+col3, col4, col5, col6 = st.columns([1, 1, 1, 1])
+rating_display = col3.selectbox("⭐️ Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
 rating = 0 if rating_display == "No preference" else float(rating_display)
-age = col6.slider(" Age of book (in years)", 0, 100, 100)
-category = col5.selectbox("Category", ["All"] + sorted(books["super_category"].dropna().unique()))
-tone = col4.selectbox("Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
+tone = col4.selectbox("🎭 Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
+category = col5.selectbox("📂 Category", ["All"] + sorted(books["super_category"].dropna().unique()))
+age = col6.slider("📅 Age of book (in years)", 0, 100, 100)
 
-
-# --- Results ---
+# --- Results Display ---
 if st.button("🔍 Recommend"):
     recommendations = retrieve_semantic_recommendations(query, category, tone, rating, age, author)
 
@@ -99,5 +86,5 @@ if st.button("🔍 Recommend"):
                 st.markdown(f"**{row['title']}** by *{row['authors']}*")
                 short_desc = " ".join(row["description"].split()[:20]) + "..."
                 with st.expander(short_desc):
-                    st.markdown("**Full Description:**")
+                    st.markdown("**Full description:**")
                     st.write(row["description"])
