@@ -41,6 +41,15 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
     isbns = [int(doc.page_content.split()[0].strip('"')) for doc in recs]
     filtered = books[books["isbn13"].isin(isbns)].copy()
 
+    if author:
+        author_clean = author.lower().strip()
+        all_authors = books["authors_clean"].dropna().unique()
+        match = get_close_matches(author_clean, all_authors, n=1, cutoff=0.6)
+        if match:
+            # ❗ Get matching ISBNs from full dataset
+            matching_isbns = books[books["authors_clean"].str.contains(match[0], na=False)]["isbn13"]
+            filtered = filtered[filtered["isbn13"].isin(matching_isbns)]
+
     if category != "All":
         filtered = filtered[filtered["super_category"] == category]
 
@@ -53,15 +62,7 @@ def retrieve_semantic_recommendations(query, category, tone, rating, age, author
     if age:
         filtered = filtered[filtered["age_of_book"] <= age]
 
-    if author:
-        author_clean = author.lower().strip()
-        all_authors = books["authors_clean"].unique()
-        match = get_close_matches(author_clean, all_authors, n=1, cutoff=0.6)
-        if match:
-            filtered = filtered[filtered["authors_clean"].str.contains(match[0])]
-
     return filtered.head(final_top_k)
-
 # --- UI ---
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("📚 Semantic Book Recommendation System")
