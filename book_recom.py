@@ -69,7 +69,7 @@ st.title("📚 Semantic Book Recommendation System")
 
 # First row — Query + Author
 col1, col2 = st.columns([2, 1])
-query = col1.text_input("🔎 Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
+query = col1.text_input("Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
 author = col2.selectbox(
     " Preferred Author (or type your own)",
     options=["No preference"] + top_authors,
