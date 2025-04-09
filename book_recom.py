@@ -7,7 +7,11 @@ from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
+import sys
+import os
 
+os.environ["PYTHONIOENCODING"] = "utf-8"
+sys.setdefaultencoding = "utf-8"
 load_dotenv()
 
 # Load dataset
