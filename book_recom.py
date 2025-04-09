@@ -33,7 +33,7 @@ else:
     db_books.save_local(VECTOR_DB_PATH)
 
 # --- Recommendation Logic ---
-def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=20, final_top_k=12):
+def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=200, final_top_k=20):
     recs = db_books.similarity_search(query, k=initial_top_k)
     isbns = [int(doc.page_content.split()[0].strip('"')) for doc in recs]
     filtered = books[books["isbn13"].isin(isbns)]
