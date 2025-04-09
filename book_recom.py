@@ -72,16 +72,16 @@ st.title("\U0001F4DA Semantic Book Recommendation System")
 
 # Row 1: Query and Author
 col1, col2 = st.columns([2, 1])
-query = col1.text_input("\U0001F50D Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
-author = col2.text_input("\U0001F469‍\U0001F4BC Preferred Author", placeholder="e.g., Paulo Coelho")
+query = col1.text_input(" Describe a book you’re looking for", placeholder="e.g., A story of forgiveness in a small town")
+author = col2.text_input("Preferred Author", placeholder="e.g., Paulo Coelho")
 
 # Row 2: Rating, Emotion, Category, Age
 col3, col4, col5, col6 = st.columns([1, 1, 1, 2])
-rating_display = col3.selectbox("⭐️ Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
+rating_display = col3.selectbox("Minimum Rating", ["No preference", 1, 2, 3, 4, 5])
 rating = 0 if rating_display == "No preference" else float(rating_display)
-tone = col4.selectbox("\U0001F3AD Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
-category = col5.selectbox("\U0001F4C2 Category", ["All"] + sorted(books["super_category"].dropna().unique()))
-age = col6.slider("\U0001F4C5 Age of book (in years)", 0, 100, 100)
+tone = col4.selectbox(" Dominant Emotion", ["All", "joy", "sadness", "fear", "anger", "surprise", "disgust", "neutral"])
+category = col5.selectbox("Category", ["All"] + sorted(books["super_category"].dropna().unique()))
+age = col6.slider(" Age of book (in years)", 0, 100, 100)
 
 # --- Results ---
 if st.button("\U0001F50D Recommend"):
