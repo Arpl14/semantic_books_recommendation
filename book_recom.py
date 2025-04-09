@@ -18,8 +18,13 @@ load_dotenv()
 VECTOR_DB_PATH = "faiss_books_index"
 
 # --- Load Dataset ---
+
 books = pd.read_csv("books_with_emotions.csv")
-books["large_thumbnail"] = books["thumbnail"].fillna("cover-not-found.jpg") + "&fife=w800"
+DEFAULT_COVER = "https://via.placeholder.com/150?text=No+Cover"
+
+books["large_thumbnail"] = books["thumbnail"].fillna(DEFAULT_COVER) + "&fife=w800"
+books["large_thumbnail"] = books["large_thumbnail"].str.replace("nan&fife=w800", DEFAULT_COVER)
+
 
 # --- Load or Build FAISS Vectorstore ---
 if os.path.exists(VECTOR_DB_PATH):
