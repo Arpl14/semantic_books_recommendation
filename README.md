@@ -1,5 +1,9 @@
 # Semantic Book Recommendation System
 https://semanticbooksrecommendation-tm7pdn3kxsrmmttvs2jjsc.streamlit.app/
+![books_search](https://github.com/user-attachments/assets/c8575e3d-ccd0-4dea-87d0-0fedf637d32d)
+
+
+
 
 This is a full-stack LLM-powered book recommendation system that semantically understands user queries and suggests relevant books based on a combination of natural language input, filters, and emotion-aware descriptions. Built using Streamlit, LangChain, Hugging Face Transformers, and OpenAI embeddings, it demonstrates advanced capabilities in vector search, NLP pipelines, and human-centered AI.
 ---
