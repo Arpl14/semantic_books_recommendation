@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -6,7 +7,7 @@ from dotenv import load_dotenv
 from difflib import get_close_matches
 
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 
@@ -14,59 +15,124 @@ from langchain.vectorstores import FAISS
 os.environ["PYTHONIOENCODING"] = "utf-8"
 load_dotenv()
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+if not OPENAI_API_KEY:
+    st.warning("OPENAI_API_KEY not found in environment. Embeddings may fail.")
+
 VECTOR_DB_PATH = "faiss_books_index"
 DEFAULT_COVER = "https://via.placeholder.com/150?text=No+Cover"
+TAGGED_PATH = "tagged_description.txt"
 
 # --- Load dataset ---
-books = pd.read_csv("books_with_emotions.csv")
-books["large_thumbnail"] = books["thumbnail"].fillna(DEFAULT_COVER) + "&fife=w800"
-books["large_thumbnail"] = books["large_thumbnail"].str.replace("nan&fife=w800", DEFAULT_COVER)
-books["authors_clean"] = books["authors"].fillna("").str.lower()
+@st.cache_data(show_spinner=False)
+def load_books():
+    df = pd.read_csv("books_with_emotions.csv")
+    # robust thumbnail handling
+    thumbs = df["thumbnail"].fillna("")
+    # only append fife param if URL exists
+    thumbs = np.where(thumbs.str.len() > 0, thumbs + ("&fife=w800" if "~" not in thumbs else ""), DEFAULT_COVER)
+    df["large_thumbnail"] = pd.Series(thumbs).replace({"nan&fife=w800": DEFAULT_COVER})
+    df["authors_clean"] = df["authors"].fillna("").str.lower()
+    return df
 
-# --- Load or Build FAISS Vectorstore ---
-if os.path.exists(VECTOR_DB_PATH):
-    db_books = FAISS.load_local(VECTOR_DB_PATH, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-else:
-    raw_documents = TextLoader("tagged_description.txt", encoding="utf-8").load()
-    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=0, chunk_overlap=0)
-    documents = text_splitter.split_documents(raw_documents)
-    db_books = FAISS.from_documents(documents, OpenAIEmbeddings())
-    db_books.save_local(VECTOR_DB_PATH)
+books = load_books()
+
+# --- Build or Load FAISS Vectorstore ---
+@st.cache_resource(show_spinner=True)
+def get_vectorstore():
+    embeddings = OpenAIEmbeddings()  # relies on env var
+    if os.path.exists(VECTOR_DB_PATH):
+        try:
+            return FAISS.load_local(
+                VECTOR_DB_PATH,
+                embeddings,
+                allow_dangerous_deserialization=True
+            )
+        except Exception as e:
+            st.info("Rebuilding FAISS index because loading failed.")
+    # Build from source
+    if not os.path.exists(TAGGED_PATH):
+        st.error(f"Missing '{TAGGED_PATH}'. Place it next to this script.")
+        st.stop()
+
+    raw_documents = TextLoader(TAGGED_PATH, encoding="utf-8").load()
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=100,
+        separators=["\n\n", "\n", " ", ""]
+    )
+    documents = splitter.split_documents(raw_documents)
+    db = FAISS.from_documents(documents, embeddings)
+    db.save_local(VECTOR_DB_PATH)
+    return db
+
+db_books = get_vectorstore()
+
+# --- Helpers ---
+ISBN_RE = re.compile(r'^\s*"?(\d{10,13})"?')
+
+def _safe_isbn_from_page(page_text: str):
+    """
+    Expects each chunk in tagged_description to start with ISBN,
+    e.g., 9780671027032 "Description text ..."
+    """
+    m = ISBN_RE.match(page_text or "")
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
 
 # --- Recommendation Logic ---
-def retrieve_semantic_recommendations(query, category, tone, rating, age, author, initial_top_k=200, final_top_k=20):
-    # Step 1: Start with the full dataset
+def retrieve_semantic_recommendations(
+    query, category, tone, rating, age, author,
+    initial_top_k=200, final_top_k=20
+):
     filtered = books.copy()
 
-    # Step 2: Apply filters first
+    # Author fuzzy filter
     if author:
         author_clean = author.lower().strip()
-        all_authors = books["authors_clean"].dropna().unique()
+        all_authors = books["authors_clean"].dropna().unique().tolist()
         match = get_close_matches(author_clean, all_authors, n=1, cutoff=0.6)
         if match:
-            filtered = filtered[filtered["authors_clean"].str.contains(match[0], na=False)]
+            filtered = filtered[filtered["authors_clean"].str.contains(re.escape(match[0]), na=False)]
 
+    # Category
     if category != "All":
         filtered = filtered[filtered["super_category"] == category]
 
-    if tone != "All":
+    # Emotion sorting (assumes emotion columns exist and are numeric)
+    if tone != "All" and tone.lower() in filtered.columns:
         filtered = filtered.sort_values(by=tone.lower(), ascending=False)
 
-    if rating:
-        filtered = filtered[filtered["average_rating"] >= rating]
+    # Rating
+    if rating and float(rating) > 0:
+        filtered = filtered[filtered["average_rating"] >= float(rating)]
 
-    if age:
-        filtered = filtered[filtered["age_of_book"] <= age]
+    # Age
+    if age is not None:
+        filtered = filtered[filtered["age_of_book"] <= int(age)]
 
-    # Step 3: If query is provided, apply similarity search on filtered subset
+    # Semantic retrieval (restrict to filtered subset)
     if query:
         recs = db_books.similarity_search(query, k=initial_top_k)
-        isbns = [int(doc.page_content.split()[0].strip('"')) for doc in recs]
+        isbns = []
+        for doc in recs:
+            isbn = _safe_isbn_from_page(doc.page_content)
+            if isbn is not None:
+                isbns.append(isbn)
+        if len(isbns) == 0:
+            return filtered.head(final_top_k)
         filtered = filtered[filtered["isbn13"].isin(isbns)]
+
+        # Optional: preserve semantic order
+        order = {isbn: i for i, isbn in enumerate(isbns)}
+        filtered = filtered.assign(_ord=filtered["isbn13"].map(order)).sort_values("_ord").drop(columns="_ord", errors="ignore")
 
     return filtered.head(final_top_k)
 
-# --- UI ---
 # --- UI ---
 st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
 st.title("\U0001F4DA Semantic Book Recommendation System")
@@ -96,7 +162,11 @@ age = col6.slider(" Age of book (in years)", 0, 100, 100)
 
 # --- Results ---
 if st.button("\U0001F50D Recommend"):
-    recommendations = retrieve_semantic_recommendations(query, category, tone, rating, age, author)
+    try:
+        recommendations = retrieve_semantic_recommendations(query, category, tone, rating, age, author)
+    except Exception as e:
+        st.error(f"Recommendation error: {e}")
+        st.stop()
 
     if recommendations.empty:
         st.warning("No recommendations found. Try adjusting your filters.")
@@ -105,8 +175,11 @@ if st.button("\U0001F50D Recommend"):
         for idx, (_, row) in enumerate(recommendations.iterrows()):
             col = cols[idx % 3]
             with col:
-                st.image(row["large_thumbnail"], width=150)
-                st.markdown(f"**{row['title']}** by *{row['authors']}*")
-                short_desc = " ".join(row["description"].split()[:20]) + "..."
-                with st.expander(short_desc):
-                    st.markdown(f"**Full Description:**\n\n{row['description']}")
+                st.image(row.get("large_thumbnail", DEFAULT_COVER), width=150)
+                title = row.get("title", "Untitled")
+                authors = row.get("authors", "Unknown author")
+                st.markdown(f"**{title}** by *{authors}*")
+                desc = str(row.get("description", "") or "")
+                short_desc = " ".join(desc.split()[:20]) + ("..." if len(desc.split()) > 20 else "")
+                with st.expander(short_desc if short_desc else "Description"):
+                    st.markdown(f"**Full Description:**\n\n{desc}")
